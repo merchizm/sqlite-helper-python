@@ -2,7 +2,6 @@
 SQLite3 Helper Class
 ===================================
  * OOP class assignment
- * 202010614039 "Enes KAYALAR"
 """
 
 import sqlite3
