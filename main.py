@@ -9,67 +9,124 @@ import sys
 from os.path import exists, realpath
 from os import system
 
+from pyfiglet import Figlet  # for stylish print
+from termcolor import colored  # for colored print
+from boxing import boxing # for successfully message
+
 
 class SqliteHelper:
-    def __init__(self, filename, table_name="null", ui=False):
+    def __init__(self, ui=False):
+        self.cur = None
+        self.conn = None
+        self.table_exists = None
         self.ui = ui  # user interface setting
+        if ui:
+            self.menu()
+
+    def menu(self):
+        f = Figlet(font='roman', width=125)
+        print(colored(f.renderText('SQLite3\nDB Helper'), 'green'))
+        menu_options = {
+            1: 'Create or Connect Database',
+            2: 'Create Table',
+            3: 'Insert Row',
+            4: 'Delete Row',
+            5: 'Fetch Row',
+            6: 'Fetch Rows',
+            7: 'Drop Table',
+            8: 'Exit',
+        }
+        print('{:^26s}'.format(colored("=Menu=", 'green', attrs=['bold'])))
+        for key in menu_options.keys():
+            text = str(key) + '--' + menu_options[key]
+            print(colored(text, 'green'))
+        option = int(input(colored('\n\nEnter your choice: ', 'white', attrs=['bold'])))
+        if option == 8:
+            exit('bye')
+        elif option == 1:  # create or connect database
+            file_name = self.input(
+                'What is the name of the database file you want to connect to (:memory: is valid)',
+                'string')
+            table_name = self.question('Do you want to link to a table')
+            if table_name:
+                table_name = self.input('Enter table name', 'string')
+            self.create_connection(file_name, table_name)
+
+            system("cls||clear")
+
+            boxing(colored('Successfully connected.', 'blue'))
+
+        elif option == 2:  # create table
+            table_name = self.input('', 'string')
+            table_column_count = int(self.input("How many columns will there be in your table", "int"))
+            table_columns = []
+            pk_status = False
+            for i in range(table_column_count):
+                column_name = self.input("[%s] 1. What will the column name be" % str(i), "string")
+                column_type = self.type("[%s] 2. What will be the Data type of the column? [Write the number of "
+                                        "the data type]" % str(i))
+                null_status = "NULL" if self.question("[%s] 3. Could the column be null") else "NOT NULL"
+                # We use variable outside the loop to make one column a primary key.
+                primary_key_status = self.question("[%s] 4. Will this column be the primary key" % str(i)) if \
+                    pk_status is not True else False
+                pk_status = True if primary_key_status is True else False
+                primary_key = "PRIMARY KEY" if primary_key_status is True else ""
+                #
+                column = "%s   %s   %s   %s" % (column_name, column_type, primary_key, null_status)
+                table_columns.append({
+                    "column_name": column_name,
+                    "column_type": column_type,
+                    "primary_key": primary_key,
+                    "null_status": null_status
+                })
+
+            system("cls||clear")  # clear terminal cls:win, clear:linux,unix
+
+            sys.stdout.write("Creating table query...")
+
+            r = self.create_table(table_name, table_columns)
+
+            system("cls||clear")
+
+            if r:
+                boxing(colored('Table successfully created.', 'blue'))
+            else:
+                boxing(colored('An error occurred while creating the table.', 'red'))
+        elif option == 3:  # insert row
+            pass
+
+    def create_connection(self, filename, table_name="null"):
         if exists(realpath(filename)):
             try:
                 self.conn = sqlite3.connect(realpath(filename))
                 self.cur = self.conn.cursor()
             except sqlite3.OperationalError as e:
                 raise Exception('Unknown error occurred. Error details: %s' % e)
+        elif filename == ':memory:':
+            try:
+                self.conn = sqlite3.connect(filename)
+                self.cur = self.conn.cursor()
+            except sqlite3.OperationalError as e:
+                raise Exception('Unknown error occurred. Error details: %s' % e)
         else:
             raise Exception("File doesn't exists. File location: %s" % realpath(filename))
 
-        # check table count
-        self.cur.execute("SELECT count(name) FROM sqlite_master WHERE type='table' AND name=(?)", table_name)
+        if table_name != 'null':
+            # check table count
+            self.cur.execute("SELECT count(name) FROM sqlite_master WHERE type='table' AND name=(?)", table_name)
 
-        if self.cur.fetchone()[0] == 1:
-            self.table_exists = True
-        else:
-            raise Exception("Table doesn't exists in the database file. Table name: %s" % table_name) if \
-                table_name != "null" else self.create_table(table_name)
-            # if table doesn't exist run create_table function
+            if self.cur.fetchone()[0] == 1:
+                self.table_exists = True
+            else:
+                raise Exception("Table doesn't exists in the database file. Table name: %s" % table_name)
+                # if table doesn't exist run create_table function
 
     def __del__(self):
         if self.conn is not None:
             self.conn.close()
 
-    def create_table(self, table_name, columns={}):
-        if self.ui and columns == {}:
-            if self.question("Do you wanna create new table named \"%s\"" % table_name):
-                table_column_count = int(self.input("How many columns will there be in your table", "int"))
-                table_columns = []
-                pk_status = False
-                for i in range(table_column_count):
-                    column_name = self.input("[%s] 1. What will the column name be" % str(i), "string")
-                    column_type = self.type("[%s] 2. What will be the Data type of the column? [Write the number of "
-                                            "the data type]" % str(i))
-                    null_status = "NULL" if self.question("[%s] 3. Could the column be null") else "NOT NULL"
-                    # We use variable outside the loop to make one column a primary key.
-                    primary_key_status = self.question("[%s] 4. Will this column be the primary key" % str(i)) if \
-                        pk_status is not True else False
-                    pk_status = True if primary_key_status is True else False
-                    primary_key = "PRIMARY KEY" if primary_key_status is True else ""
-                    #
-                    column = "%s   %s   %s   %s" % (column_name, column_type, primary_key, null_status)
-                    table_columns.append(column)
-
-                system("cls||clear")  # clear terminal cls:win, clear:linux,unix
-
-                sys.stdout.write("Creating table query...")
-
-                columns = ""
-                for column in table_columns:
-                    columns += column + ","
-
-                # delete the last comma because it is extra.
-                query = "CREATE TABLE %s(%s);" % (table_name, columns[-len(columns)])
-                self.cur.execute(query)
-            else:
-                pass
-        elif columns != {}:
+    def create_table(self, table_name, columns=[]):
+        if columns != {}:
             result = []
             for column in columns:
                 column_string = "%s   %s   %s   %s" % (column["column_name"], column["column_type"],
@@ -83,8 +140,10 @@ class SqliteHelper:
             # delete the last comma because it is extra.
             query = "CREATE TABLE %s(%s);" % (table_name, columns_string[-len(columns_string)])
             self.cur.execute(query)
+            return True
         else:
-            raise Exception("Exception: Missing Parameter ! Missing Parameter is; \"columns\" type of Dictionary")
+            sys.stdout.write('Exception: Missing Parameter ! Missing Parameter is; \"columns\"\nExample: [{...data}]')
+            return False
 
     def drop_table(self, table_name):
         if self.ui:
@@ -223,5 +282,4 @@ class SqliteHelper:
 
 
 if __name__ == '__main__':
-    helper = SqliteHelper('default.db')
-    helper.show_menu()
+    helper = SqliteHelper(True)
