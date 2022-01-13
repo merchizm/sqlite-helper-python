@@ -6,12 +6,13 @@ SQLite3 Helper Class
 
 import sqlite3
 import sys
+import re
 from os.path import exists, realpath
 from os import system
 
 from pyfiglet import Figlet  # for stylish print
 from termcolor import colored  # for colored print
-from boxing import boxing # for successfully message
+from boxing import boxing  # for successfully message
 
 
 class SqliteHelper:
@@ -47,17 +48,14 @@ class SqliteHelper:
             file_name = self.input(
                 'What is the name of the database file you want to connect to (:memory: is valid)',
                 'string')
-            table_name = self.question('Do you want to link to a table')
-            if table_name:
-                table_name = self.input('Enter table name', 'string')
-            self.create_connection(file_name, table_name)
+            self.create_connection(file_name)
 
             system("cls||clear")
 
             boxing(colored('Successfully connected.', 'blue'))
 
         elif option == 2:  # create table
-            table_name = self.input('', 'string')
+            table_name = self.input('Enter the name of the table you want to create', 'string')
             table_column_count = int(self.input("How many columns will there be in your table", "int"))
             table_columns = []
             pk_status = False
@@ -80,20 +78,38 @@ class SqliteHelper:
                     "null_status": null_status
                 })
 
-            system("cls||clear")  # clear terminal cls:win, clear:linux,unix
+            system('cls||clear')  # clear terminal cls:win, clear:linux,unix
 
-            sys.stdout.write("Creating table query...")
+            boxing(colored('Creating table query...', 'blue'))
 
             r = self.create_table(table_name, table_columns)
 
-            system("cls||clear")
+            system('cls||clear')
 
             if r:
                 boxing(colored('Table successfully created.', 'blue'))
             else:
                 boxing(colored('An error occurred while creating the table.', 'red'))
         elif option == 3:  # insert row
-            pass
+            table_name = self.input('Enter the table name you want to insert data to', 'string')
+            cur = self.cur.execute("SELECT * from %s" % table_name)
+            column_names = list(map(lambda x: x[0], cur.description))  # get columns from the table
+            print(colored('Columns in the table:', attrs=["bold"]))
+            print(cur.description)  # todo: test
+            for column in column_names:
+                print(colored('-' + column, 'green'))
+            if self.question("Are you sure you want to insert data to this table?"):
+                exit()
+            else:
+                system('cls||clear')
+                boxing(colored('Table dropping was cancelled.', 'blue'))
+        elif option == 7:  # drop table
+            table_name = self.input('Enter the table name you want to drop', 'string')
+            if self.question("Are you sure you want to drop table \"%s\"" % table_name):
+                self.drop_table(table_name)
+            else:
+                system('cls||clear')
+                boxing(colored('Table dropping was cancelled.', 'blue'))
 
     def create_connection(self, filename, table_name="null"):
         if exists(realpath(filename)):
@@ -146,25 +162,13 @@ class SqliteHelper:
             return False
 
     def drop_table(self, table_name):
-        if self.ui:
-            if self.question("Are you sure you want to drop table \"%s\""):
-                try:
-                    self.cur.execute("DROP TABLE {}".format(table_name))
-                except Exception as e:
-                    sys.stdout.write("Cannot remove table: %s. Exception: {}.".format(table_name, e))
-                    return False
-                self.conn.commit()
-                return True
-            else:
-                sys.stdout.write("Table dropping was cancelled.")
-        else:
-            try:
-                self.cur.execute("DROP TABLE {}".format(table_name))
-            except Exception as e:
-                sys.stdout.write("Cannot drop table: %s. Exception: {}.".format(table_name, e))
-                return False
-            self.conn.commit()
-            return True
+        try:
+            self.cur.execute("DROP TABLE {}".format(table_name))
+        except Exception as e:
+            sys.stdout.write("Cannot drop table: %s. Exception: {}.".format(table_name, e))
+            return False
+        self.conn.commit()
+        return True
 
     def insert(self, table_name, values):
         if table_name is not None and type(values) is list:
@@ -242,23 +246,23 @@ class SqliteHelper:
     def question(self, question_paragraph):
         options = {"yes": True, "y": True, "no": False, "n": False}
         while True:
-            sys.stdout.write("%s ? [Y/n]" % question_paragraph)
+            sys.stdout.write("%s ? [Y/n]\n" % question_paragraph)
             choice = input().lower()
             if choice in options:
                 return options[choice]
             else:
-                sys.stdout.write("Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n")
+                sys.stdout.write(colored("Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n", "yellow"))
 
     def input(self, input_paragraph, data_type):
         while True:
-            sys.stdout.write("%s ? [Response Type:%s]" % (input_paragraph, "Number" if data_type == "int" else "Text"))
+            sys.stdout.write("%s ? [Response Type:%s]\n" % (input_paragraph, "Number" if data_type == "int" else "Text"))
             response = input().lower()
             if data_type == "int" and response.isdigit():
                 return response
             elif data_type == "string" and response is not None:
                 return response
             else:
-                sys.stdout.write("Please give a valid response, do not leave it blank.\n")
+                sys.stdout.write(colored("Please give a valid response, do not leave it blank.\n", "yellow"))
 
     def type(self, type_paragraph="What will be the Data type of the column? [Write the number of the data type]"):
         while True:
@@ -273,12 +277,12 @@ class SqliteHelper:
             for k, v in data_types.items():
                 num, d_type = v
                 print(num, d_type)
-            sys.stdout.write(type_paragraph)
+            sys.stdout.write(colored(type_paragraph + "\n", "green"))
             number = input()
             if number.isdigit() and 1 <= int(number) <= 5:
                 return data_types[int(number)]
             else:
-                sys.stdout.write("Please enter a valid number, do not leave it blank.\n")
+                sys.stdout.write(colored("Please enter a valid number, do not leave it blank.\n", "yellow"))
 
 
 if __name__ == '__main__':
