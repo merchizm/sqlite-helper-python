@@ -29,40 +29,40 @@ class SqliteHelper:
             f = Figlet(font='roman', width=125)
             print(colored(f.renderText('SQLite3\nDB Helper'), 'green'))
         menu_options = {
-            1: 'Create or Connect Database',
-            2: 'Create Table',
-            3: 'Insert Row',
-            4: 'Delete Row',
-            5: 'Fetch Row(s)',
-            6: 'Drop Table',
-            7: 'Exit',
+            1: 'Veritabanı oluştur veya bağlan',
+            2: 'Tablo Oluştur',
+            3: 'Satır Gir',
+            4: 'Satır Sil',
+            5: 'Satır Getir',
+            6: 'Tablo Düşür',
+            7: 'Çıkış',
         }
         print('{:^26s}'.format(colored("=Menu=", 'green', attrs=['bold'])))
         for key in menu_options.keys():
             text = str(key) + '--' + menu_options[key]
             print(colored(text, 'green'))
-        option = int(input(colored('\n\nEnter your choice: ', 'white', attrs=['bold'])))
+        option = int(input(colored('\n\nTercihinizi giriniz: ', 'white', attrs=['bold'])))
         if option == 7:
-            exit('bye')
+            exit('görüşürüz..')
         elif option == 1:  # create or connect database
             file_name = self.input(
-                'What is the name of the database file you want to connect to (:memory: is valid)',
+                'Bağlanmak istediğiniz veritabanının dosyasının adını girin (:memory: geçerli)',
                 'string')
             self.create_connection(file_name)
 
             system('cls' if name in ('nt', 'dos') else 'clear')
 
-            print(boxing(colored('Successfully connected.', 'blue')))
+            print(boxing(colored('Başarıyla veritabanına bağlanıldı.', 'blue')))
         elif option == 2:  # create table
-            table_name = self.input('Enter the name of the table you want to create', 'string')
-            table_column_count = int(self.input("How many columns will there be in your table", "int"))
+            table_name = self.input('Oluşturmak istediğiniz tablonun ismini belirtiniz', 'string')
+            table_column_count = int(self.input("Tabloda kaç satır olacağını belirtiniz", "int"))
             table_columns = []
             pk_status = False
             for i in range(table_column_count):
-                column_name = self.input("[%s] 1. What will the column name be" % str(i), "string")
-                column_type = self.type("[%s] 2. What will be the Data type of the column? [Write the number of "
-                                        "the data type]" % str(i))
-                if self.question("[%s] 3. Could the column be null" % str(i)):
+                column_name = self.input("[%s] 1. Satırın ismini belirtiniz" % str(i), "string")
+                column_type = self.type("[%s] 2. Satırın türünü belirtiniz [Veri tipinin karşısındaki sayıyı giriniz]"
+                                        % str(i))
+                if self.question("[%s] 3. Bu satır boş olabilir mi" % str(i)):
                     null_status = "NULL"
                 else:
                     null_status = "NOT NULL"
@@ -70,7 +70,7 @@ class SqliteHelper:
                 # We use variable outside the loop to make one column a primary key.
                 primary_key = ""
                 if not pk_status:
-                    primary_key_status = self.question("[%s] 4. Will this column be the primary key" % str(i))
+                    primary_key_status = self.question("[%s] 4. Bu satır Birincil Anahtar olsun mu" % str(i))
                     primary_key = "PRIMARY KEY" if primary_key_status is True else ""
                     pk_status = True
                 #
@@ -85,24 +85,24 @@ class SqliteHelper:
 
             system('cls' if name in ('nt', 'dos') else 'clear')  # clear terminal cls:win, clear:linux,unix
 
-            print(boxing(colored('Creating table query...', 'blue')))
+            print(boxing(colored('Tablonun sorgusu oluşturuluyor..', 'blue')))
 
             r = self.create_table(table_name, table_columns)
 
             system('cls' if name in ('nt', 'dos') else 'clear')
 
             if r:
-                print(boxing(colored('Table successfully created.', 'blue')))
+                print(boxing(colored('Tablo oluşturuldu.', 'blue')))
             else:
-                print(boxing(colored('An error occurred while creating the table.', 'red')))
+                print(boxing(colored('Tablo oluşturulurken hata ile karşılaşıldı.', 'red')))
         elif option == 3:  # insert row
-            table_name = self.input('Enter the table name you want to insert data to', 'string')
+            table_name = self.input('Satır girmek istediğiniz tabloyu belirtiniz', 'string')
             columns_query = self.cur.execute(f"pragma table_info('{table_name}')").fetchall()
-            print(colored('Columns in the table:', attrs=["bold"]))
+            print(colored('Tablodaki sütunlar:', attrs=["bold"]))
             for column in columns_query:
                 print(colored('-' + str(column[1]) + " | type " + str(column[2]) + " | is "
                               + ('NULL' if column[3] == 0 else 'NOT NULL'), 'green'))
-            if self.question("Are you sure you want to insert data to this table?"):
+            if self.question("Bu tabloya satır girmek istediğinize emin misiniz?"):
                 values = []
                 for column in columns_query:
                     types_to_type = {
@@ -112,10 +112,11 @@ class SqliteHelper:
                         "BLOB": "string"
                     }
                     if column[3] == 1:
-                        value = self.input('Enter value for column "' + column[1] + '" [NOT NULL]',
+                        value = self.input('"' + column[1] + '" Satırının içeriğini giriniz [BOŞ BIRAKILAMAZ]',
                                            types_to_type[column[2]])
                     else:
-                        value = self.input('Enter value for column "' + column[1] + '" [type null to be null/0]',
+                        value = self.input('"' + column[1] + '"Satırının içeriğini giriniz [boş bırakmak için '
+                                                             '0 veya null yazın.]',
                                            types_to_type[column[2]])
                     if column[2] == "REAL":
                         values.append(float(value))
@@ -125,14 +126,14 @@ class SqliteHelper:
                         values.append(int(value))
                 system('cls' if name in ('nt', 'dos') else 'clear')
                 if self.insert(table_name, values):
-                    print(boxing(colored('insertion was successful.', 'blue')))
+                    print(boxing(colored('Satır başarıyla girildi.', 'blue')))
                 else:
-                    print(boxing(colored('insertion has failed.', 'red')))
+                    print(boxing(colored('Satır girilirken hata ile karşılaşıldı.', 'red')))
             else:
                 system('cls' if name in ('nt', 'dos') else 'clear')
-                print(boxing(colored('insertion has been cancelled.', 'red')))
+                print(boxing(colored('Satır girme işlemi iptal edildi.', 'red')))
         elif option == 4:  # delete row
-            table_name = self.input('Enter the table name you want to delete data from', 'string')
+            table_name = self.input('Satır silmek istediğiniz tablonun adını giriniz', 'string')
             cur = self.cur.execute("SELECT * FROM {} LIMIT 50;".format(table_name))
             column_names = list(map(lambda x: x[0], cur.description))
             system('cls' if name in ('nt', 'dos') else 'clear')
@@ -142,14 +143,14 @@ class SqliteHelper:
             for row in cur.fetchall():
                 row = [str(x) for x in row]
                 sys.stdout.write(formatted_row.format(*row) + "\r\n")
-            row_id = self.input('Enter id of the row you want to delete', 'string')
+            row_id = self.input('Silmek istediğiniz satırın id\'sini giriniz.', 'string')
             if self.delete_row(table_name, "id", row_id):
-                print(boxing(colored('The row has been deleted.', 'blue')))
+                print(boxing(colored('Satır başarıyla silindi.', 'blue')))
             else:
-                print(boxing(colored('The row could not be deleted.', 'red')))
+                print(boxing(colored('Satır silinirken bir hata meydana geldi..', 'red')))
         elif option == 5:  # get row(s)
-            table_name = self.input('Enter table name you want to fetch data from', 'string')
-            row_id = self.input('Enter id of the row you want to fetch', 'string')
+            table_name = self.input('Satır(lar) çekmek istediğiniz tablonun adını giriniz', 'string')
+            row_id = self.input('Çekmek istediğiniz satırın id\'sini giriniz', 'string')
             result = self.get_rows(table_name, "id", row_id)
             if result is not None:
                 column_names = self.get_column_names(table_name)
@@ -162,17 +163,17 @@ class SqliteHelper:
                     sys.stdout.write(formatted_row.format(*row) + "\r\n")
                 sys.stdout.write("\r\n" * 5)
             else:
-                print(boxing(colored('Failed to fetch data. Please, try again.', 'red')))
+                print(boxing(colored('Veri getirilirken hata ile karşılaşıldı', 'red')))
         elif option == 6:  # drop table
-            table_name = self.input('Enter the table name you want to drop', 'string')
+            table_name = self.input('Düşürmek istediğiniz tablonun adını giriniz', 'string')
             if self.question("Are you sure you want to drop table \"%s\"" % table_name):
                 if self.drop_table(table_name):
-                    print(boxing(colored('Table successfully dropped.', 'blue')))
+                    print(boxing(colored('Tablo başarıyla düşürüldü.', 'blue')))
                 else:
-                    print(boxing(colored('Failed to drop table. Please, try again.', 'red')))
+                    print(boxing(colored('Tablo düşürülürken hata ile karşılaşıldı.', 'red')))
             else:
                 system('cls' if name in ('nt', 'dos') else 'clear')
-                boxing(colored('Table dropping was cancelled.', 'blue'))
+                boxing(colored('Tablo düşürülmesinden vazgeçildi.', 'blue'))
         self.menu(True)
 
     def create_connection(self, filename, table_name="null"):
@@ -181,15 +182,15 @@ class SqliteHelper:
                 self.conn = sqlite3.connect(realpath(filename))
                 self.cur = self.conn.cursor()
             except sqlite3.OperationalError as e:
-                raise Exception('Unknown error occurred. Error details: %s' % e)
+                raise Exception('Bilinmeyen bir hata oluştu. Hata detayları: %s' % e)
         elif filename == ':memory:':
             try:
                 self.conn = sqlite3.connect(filename)
                 self.cur = self.conn.cursor()
             except sqlite3.OperationalError as e:
-                raise Exception('Unknown error occurred. Error details: %s' % e)
+                raise Exception('Bilinmeyen bir hata oluştu. Hata detayları: %s' % e)
         else:
-            raise Exception("File doesn't exists. File location: %s" % realpath(filename))
+            raise Exception("Veritabanı dosyası bulunamadı. Dosya konumu : %s" % realpath(filename))
 
         if table_name != 'null':
             # check table count
@@ -198,7 +199,7 @@ class SqliteHelper:
             if self.cur.fetchone()[0] == 1:
                 self.table_exists = True
             else:
-                raise Exception("Table doesn't exists in the database file. Table name: %s" % table_name)
+                raise Exception("Tablo veritabanında bulunamadı. Tablo adı: %s" % table_name)
                 # if table doesn't exist run create_table function
 
     def __del__(self):
@@ -221,14 +222,14 @@ class SqliteHelper:
             self.cur.execute(query)
             return True
         else:
-            sys.stdout.write('Exception: Missing Parameter ! Missing Parameter is; \"columns\"\nExample: [{...data}]')
+            sys.stdout.write('Hata: Columns parametresi girilmemiş.')
             return False
 
     def drop_table(self, table_name):
         try:
             self.cur.execute("DROP TABLE {}".format(table_name))
         except Exception as e:
-            sys.stdout.write("Cannot drop table: %s. Exception: {}.".format(table_name, e))
+            sys.stdout.write("Tablo düşürülemedi: %s. Hata: {}.".format(table_name, e))
             return False
         self.conn.commit()
         return True
@@ -243,14 +244,13 @@ class SqliteHelper:
                 else:
                     self.cur.execute("INSERT INTO {} values({})".format(table_name, placeholder), inserted_values)
             except sqlite3.OperationalError as e:
-                sys.stdout.write("Exception: {} when inserting data into table {}. "
-                                 "Possible data length mismatch, invalid table".format(e, table_name))
+                sys.stdout.write("{} tablosuna veri girilirken hata oluştu. Hata: {}.".format(table_name, e))
                 return False
             self.conn.commit()
             return True
         else:
-            sys.stdout.write("Trying to insert data into table {} "
-                             "which is not of type list. Passed type {}".format(table_name, type(values)))
+            sys.stdout.write("{} tablosuna veri eklenirken hata meydana geldi."
+                             "Açıklama: veriler istenilen türde verilmemiş.".format(table_name))
             return False
 
     def get_row(self, table_name, column, query):
@@ -262,7 +262,7 @@ class SqliteHelper:
                 return self.cur.execute("SELECT * FROM {} WHERE {} = {};".format(table_name, column, query)).fetchone()
         except sqlite3.Error as e:
             sys.stdout.write(
-                "Cannot query rows from {}. Requested column: {}. Exception: {}".format(table_name, column, e))
+                "{} tablosundan veri getirilemedi. Sütun bilgisi: {}. Hata: {}".format(table_name, column, e))
             return None
 
     def get_rows(self, table_name, column, query):
@@ -274,7 +274,7 @@ class SqliteHelper:
                     "SELECT * FROM {} WHERE {} LIKE '{}';".format(table_name, column, query)).fetchall()
         except sqlite3.Error as e:
             sys.stdout.write(
-                "Cannot query rows from {}. Requested column: {}. Exception: {}".format(table_name, column, e))
+                "{} tablosundan veri getirilemedi. Sütun bilgisi: {}. Hata: {}".format(table_name, column, e))
             return None
 
     def delete_row(self, table_name, column, query):
@@ -287,7 +287,7 @@ class SqliteHelper:
             print(q)
             self.cur.execute(q)
         except sqlite3.Error as e:
-            sys.stdout.write("Cannot delete row from {}. Query: {}. Exception: {}".format(table_name, q, e))
+            sys.stdout.write("{} tablosundan satır silinemedi. Sorgu: {}. Hata: {}".format(table_name, q, e))
             return False
         return True
 
@@ -299,21 +299,21 @@ class SqliteHelper:
             if choice in options:
                 return options[choice]
             else:
-                sys.stdout.write(colored("Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n", "yellow"))
+                sys.stdout.write(colored("lütfen 'yes' veya 'no' ile yanıt veriniz. " "(veya 'y' veya 'n').\n", "yellow"))
 
     def input(self, input_paragraph, data_type):
         while True:
             sys.stdout.write(
-                "%s ? [Response Type:%s]\n" % (input_paragraph, "Number" if data_type == "int" else "Text"))
+                "%s ? [Yanıt Türü:%s]\n" % (input_paragraph, "Number" if data_type == "int" else "Text"))
             response = input().lower()
             if data_type == "int" and response.isdigit():
                 return response
             elif data_type == "string" and response is not None:
                 return response
             else:
-                sys.stdout.write(colored("Please give a valid response, do not leave it blank.\n", "yellow"))
+                sys.stdout.write(colored("Lütfen geçerli bir cevap giriniz. Boş bırakmayınız.\n", "yellow"))
 
-    def type(self, type_paragraph="What will be the Data type of the column? [Write the number of the data type]"):
+    def type(self, type_paragraph="Sütunun veri türü ne olsun? [veri türünün numarasını giriniz]"):
         while True:
             data_types = {
                 1: "TEXT",
@@ -330,7 +330,7 @@ class SqliteHelper:
             if number.isdigit() and 1 <= int(number) <= 5:
                 return data_types[int(number)]
             else:
-                sys.stdout.write(colored("Please enter a valid number, do not leave it blank.\n", "yellow"))
+                sys.stdout.write(colored("Lütfen geçerli bir cevap giriniz. Boş bırakmayınız.\n", "yellow"))
 
 
 if __name__ == '__main__':
